@@ -1,0 +1,15 @@
+{:paths ["resources" "src"]
+ :deps {org.clojure/clojure {:mvn/version "RELEASE"}
+        org.apache.lucene/lucene-core   {:mvn/version "8.1.1"}
+        org.apache.lucene/lucene-queryparser   {:mvn/version "8.1.1"}
+        org.apache.lucene/lucene-analyzers-common {:mvn/version "8.1.1"}}
+ :aliases
+ {:test {:extra-paths ["test"]
+         :extra-deps {org.clojure/test.check {:mvn/version "RELEASE"}}
+         :jvm-opts ["-Xmx512m"]}
+  :runner
+  {:extra-deps {com.cognitect/test-runner
+                {:git/url "https://github.com/cognitect-labs/test-runner"
+                 :sha "76568540e7f40268ad2b646110f237a60295fa3c"}}
+   :main-opts ["-m" "cognitect.test-runner"
+               "-d" "test"]}}}
