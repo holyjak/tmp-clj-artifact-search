@@ -1,7 +1,7 @@
 ;; TODO Take download count into account
-;; TODO Switch from TermQuery to Perfix / Fuzzy query?
 ;; TODO Optimize: try various searches => adjust query type, weights
 ;; TODO Review, simplify
+;; FIXME "re-frame" finds nothing, "frame" does
 (ns clj-artifact-search.clj-artifact-search
   "Index and search MAven/Clojars artifacts."
   (:require
@@ -11,7 +11,7 @@
            (org.apache.lucene.analysis.standard StandardAnalyzer)
            (org.apache.lucene.index IndexWriterConfig IndexWriterConfig$OpenMode IndexWriter DirectoryReader Term IndexOptions)
            (org.apache.lucene.document Document StringField Field$Store TextField FieldType Field)
-           (org.apache.lucene.search IndexSearcher TopDocs ScoreDoc BooleanQuery$Builder TermQuery BooleanClause$Occur Query BoostQuery)
+           (org.apache.lucene.search IndexSearcher TopDocs ScoreDoc BooleanQuery$Builder TermQuery BooleanClause$Occur Query BoostQuery PrefixQuery)
            (org.apache.lucene.queryparser.classic QueryParser)
            (org.apache.lucene.analysis.tokenattributes CharTermAttribute)
            (org.apache.lucene.analysis CharArraySet)
@@ -127,11 +127,11 @@
   (.build
     (doto (BooleanQuery$Builder.)
       (.add (BoostQuery.
-              (TermQuery. (Term. "artifact-id" query-text))
+              (PrefixQuery. (Term. "artifact-id" query-text))
               4)
             (BooleanClause$Occur/SHOULD))
       (.add (BoostQuery.
-              (TermQuery. (Term. "group-id" query-text))
+              (PrefixQuery. (Term. "group-id" query-text))
               2)
             (BooleanClause$Occur/SHOULD))
       (.add (TermQuery. (Term. "description" query-text))
