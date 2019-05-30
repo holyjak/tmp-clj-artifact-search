@@ -1,6 +1,7 @@
-;; TODO Add weights to the query: artifact id > group id > description
+;; TODO Take download count into account
 ;; TODO Switch from TermQuery to Perfix / Fuzzy query?
 ;; TODO Optimize: try various searches => adjust query type, weights
+;; TODO Review, simplify
 (ns clj-artifact-search.clj-artifact-search
   "Index and search MAven/Clojars artifacts."
   (:require
@@ -10,7 +11,7 @@
            (org.apache.lucene.analysis.standard StandardAnalyzer)
            (org.apache.lucene.index IndexWriterConfig IndexWriterConfig$OpenMode IndexWriter DirectoryReader Term IndexOptions)
            (org.apache.lucene.document Document StringField Field$Store TextField FieldType Field)
-           (org.apache.lucene.search IndexSearcher TopDocs ScoreDoc BooleanQuery$Builder TermQuery BooleanClause$Occur Query)
+           (org.apache.lucene.search IndexSearcher TopDocs ScoreDoc BooleanQuery$Builder TermQuery BooleanClause$Occur Query BoostQuery)
            (org.apache.lucene.queryparser.classic QueryParser)
            (org.apache.lucene.analysis.tokenattributes CharTermAttribute)
            (org.apache.lucene.analysis CharArraySet)
@@ -56,6 +57,7 @@
     :as artifact}]
   (doto (Document.)
     ;; StringField is indexed but not tokenized, term freq. or positional info not indexed
+    ;; We need a unique identifier for each doc so that we can use updateDocument
     (.add (StringField. "id" (artifact->id artifact) Field$Store/YES))
     (.add (TextField. "artifact-id" artifact-id Field$Store/YES))
     (.add (TextField. "group-id" group-id Field$Store/YES))
@@ -87,7 +89,7 @@
 
 (defn index! []
   (let [{:keys [create?]} {:create? true}
-        analyzer (StopAnalyzer. (CharArraySet. ["." "-"] true));(mk-indexing-analyzer)
+        analyzer (mk-indexing-analyzer)
         iw-cfg   (doto (IndexWriterConfig. analyzer)
                    (.setOpenMode (if create?
                                    IndexWriterConfig$OpenMode/CREATE
@@ -124,10 +126,13 @@
 (defn ^Query ->query [^String query-text]
   (.build
     (doto (BooleanQuery$Builder.)
-      ;; TODO Add boost/weight
-      (.add (TermQuery. (Term. "artifact-id" query-text))
+      (.add (BoostQuery.
+              (TermQuery. (Term. "artifact-id" query-text))
+              4)
             (BooleanClause$Occur/SHOULD))
-      (.add (TermQuery. (Term. "group-id" query-text))
+      (.add (BoostQuery.
+              (TermQuery. (Term. "group-id" query-text))
+              2)
             (BooleanClause$Occur/SHOULD))
       (.add (TermQuery. (Term. "description" query-text))
             (BooleanClause$Occur/SHOULD)))))
