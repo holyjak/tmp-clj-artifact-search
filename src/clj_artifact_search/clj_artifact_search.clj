@@ -44,6 +44,7 @@
   (:require
     [clj-artifact-search.query :as q]
     [clojure.edn :as edn]
+    [clojure.java.io :as io]
     [clojure.string :refer [join]])
   (:import (java.nio.file Paths)
            (org.apache.lucene.store FSDirectory)
@@ -56,15 +57,12 @@
            (org.apache.lucene.analysis CharArraySet)
            (org.apache.lucene.analysis.miscellaneous PerFieldAnalyzerWrapper)
            (org.apache.lucene.analysis.core StopAnalyzer)
-           (org.apache.lucene.queryparser.flexible.standard.builders RegexpQueryNodeBuilder)
-           (org.apache.lucene.analysis TokenStream)
-           (java.util.regex Pattern)))
+           (java.util.zip GZIPInputStream)))
 
 (defn load-artifacts*
   []
-  (->
-    (str "[" (slurp "data/feed.clj") "]")
-    (edn/read-string)))
+  (with-open [in (io/reader (GZIPInputStream. (io/input-stream "https://clojars.org/repo/feed.clj.gz")))]
+    (doall (map edn/read-string (line-seq in)))))
 
 (def load-artifacts (memoize load-artifacts*))
 
